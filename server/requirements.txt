@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+pyjwt
+passlib[bcrypt]
+pytesseract
+Pillow
+langchain
+langchain-huggingface
+langchain-community
