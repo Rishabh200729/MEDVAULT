@@ -3,9 +3,10 @@ uvicorn
 sqlalchemy
 python-multipart
 pyjwt
-passlib[bcrypt]
+bcrypt
 pytesseract
 Pillow
 langchain
 langchain-huggingface
 langchain-community
+google-generativeai

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Droplets, AlertTriangle, Pill, Phone, QrCode, Mic, Volume2, Shield, ClipboardList } from 'lucide-react';
+import { Heart, Droplets, AlertTriangle, Pill, Phone, QrCode, Mic, Volume2, Shield, ClipboardList, MessageCircle } from 'lucide-react';
 import { api, getToken, getUser, isLoggedIn } from '../lib/api';
+import VoiceChatRAG from '../components/VoiceChatRAG';
 
 interface Profile {
   medical_id: string;
@@ -203,6 +204,17 @@ export default function PatientDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* RAG Voice Chat */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <div className="page-header" style={{ marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MessageCircle size={22} color="#14b8a6" /> AI Health Chat
+          </h2>
+          <p className="page-subtitle">Speech-to-speech RAG assistant — ask anything about your medical records</p>
+        </div>
+        <VoiceChatRAG />
       </div>
 
       {/* Edit Profile */}

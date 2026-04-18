@@ -22,6 +22,7 @@ from auth import (
 )
 from ai_engine import summarize_report, generate_voice_summary
 from ocr_processor import process_upload, save_uploaded_file
+from rag_voice import build_rag_context, query_gemini
 
 # ─── App Init ────────────────────────────────────────────────────────────────
 
@@ -115,6 +116,11 @@ class UpdateProfileRequest(BaseModel):
 
 class VoiceQueryRequest(BaseModel):
     language: str = "hi"
+
+
+class RAGChatRequest(BaseModel):
+    query: str
+    language: str = "en"
 
 
 # ─── AUTH ROUTES ─────────────────────────────────────────────────────────────
@@ -464,6 +470,66 @@ def voice_health_summary(
     return {
         "voice_summary": summary,
         "language": req.language,
+    }
+
+
+# ─── RAG VOICE CHAT ──────────────────────────────────────────────────────────
+
+@app.post("/api/voice/chat", tags=["Voice AI"])
+def rag_voice_chat(
+    req: RAGChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """RAG-powered voice chat — answers patient questions using their medical records as context."""
+    # Step 1: Retrieve patient data (RAG retrieval)
+    patient_data = {
+        "full_name": current_user.full_name,
+        "date_of_birth": current_user.date_of_birth,
+        "gender": current_user.gender,
+        "blood_group": current_user.blood_group,
+        "allergies": current_user.allergies,
+        "chronic_conditions": current_user.chronic_conditions,
+        "current_medications": current_user.current_medications,
+    }
+
+    # Step 2: Retrieve medical records
+    records = db.query(MedicalRecord).filter(
+        MedicalRecord.patient_id == current_user.id
+    ).order_by(MedicalRecord.created_at.desc()).all()
+
+    records_data = [
+        {
+            "title": r.title,
+            "record_type": r.record_type.value if r.record_type else None,
+            "ai_summary": r.ai_summary,
+            "alert_level": r.alert_level.value if r.alert_level else "normal",
+            "alert_reason": r.alert_reason,
+            "report_date": r.report_date.isoformat() if r.report_date else None,
+        }
+        for r in records
+    ]
+
+    # Step 3: Build RAG context
+    rag_context = build_rag_context(patient_data, records_data)
+
+    # Step 4: Query LLM with context (Gemini free tier or fallback)
+    answer = query_gemini(req.query, rag_context, req.language)
+
+    # Step 5: Log the session
+    session = VoiceSession(
+        patient_id=current_user.id,
+        language=req.language,
+        query=req.query,
+        response=answer,
+    )
+    db.add(session)
+    db.commit()
+
+    return {
+        "answer": answer,
+        "language": req.language,
+        "rag_source": f"{len(records_data)} medical records used as context",
     }
 
 
